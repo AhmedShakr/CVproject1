@@ -2,15 +2,16 @@ import os
 from pathlib import Path
 from datasets import load_dataset
 from PIL import Image
+import io
 
 def run_dataset_download():
     # Target our local data folder we created earlier
     save_directory = Path("./data/Images")
     
-    print("[*] Connecting to stable Stanford Dogs mirror on Hugging Face...")
+    print("[*] Connecting to secure Parquet Stanford Dogs dataset on Hugging Face...")
     try:
-        # Load the stable community mirror containing all 20,580 rows
-        hf_data = load_dataset("Alanox/stanford-dogs", split="full")
+        # Load the stable parquet version which doesn't require legacy .py scripts
+        hf_data = load_dataset("netgator/stanford-dogs", split="train")
         print(f"[+] Connection secure. Total records found: {len(hf_data)}")
     except Exception as error:
         print(f"[-] Failed to stream data repository: {error}")
@@ -20,11 +21,8 @@ def run_dataset_download():
     
     # Iterate through individual samples and serialize them to disk files
     for position, record in enumerate(hf_data):
-        # Extract the breed name string out of the file path metadata
-        # Example 'name': 'n02085620-Chihuahua/n02085620_7.jpg' -> 'Chihuahua'
-        raw_path_string = record["name"]
-        folder_part = raw_path_string.split('/')[0]
-        breed_name = folder_part.split('-', 1)[-1] if '-' in folder_part else folder_part
+        # The parquet dataset has an explicit 'breed' string column
+        breed_name = record.get("breed", "unknown_breed")
         
         # Format breed directories safely
         breed_folder = save_directory / breed_name.replace(" ", "_")
@@ -35,7 +33,14 @@ def run_dataset_download():
         
         # Save image matrix array to disk if not already processed
         if not output_file_path.exists():
-            image_raw = record["image"]
+            raw_data = record["image"]
+            
+            # If the image comes as a dictionary of bytes, open it cleanly
+            if isinstance(raw_data, dict) and "bytes" in raw_data:
+                image_raw = Image.open(io.BytesIO(raw_data["bytes"]))
+            else:
+                image_raw = raw_data
+                
             if image_raw.mode != "RGB":
                 image_raw = image_raw.convert("RGB")
             image_raw.save(output_file_path, "JPEG")
