@@ -1,6 +1,6 @@
 # Dog Breed Classifier 
 
-https://huggingface.co/spaces/mimo1972/dog-breed-explorer
+ Deployment : https://huggingface.co/spaces/mimo1972/dog-breed-explorer
 
 An image classification project using PyTorch to train models on a dataset of over 20,000 images.
 
